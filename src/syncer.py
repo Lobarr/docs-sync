@@ -87,22 +87,29 @@ class Syncer:
                 exit(1)
 
         info = {
-            "access_token": self.config.google_creds.access_token,
-            "refresh_token": self.config.google_creds.refresh_token,
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "client_id": self.config.google_creds.client_id,
-            "client_secret": self.config.google_creds.client_secret,
+            'access_token': self.config.google_creds.access_token,
+            'refresh_token': self.config.google_creds.refresh_token,
+            'token_uri': 'https://oauth2.googleapis.com/token',
+            'client_id': self.config.google_creds.client_id,
+            'client_secret': self.config.google_creds.client_secret,
         }
         creds = Credentials.from_authorized_user_info(info=info)
 
         # connect to firestore in order to persist progress
-        self.db_client = firestore.Client(
-            credentials=creds)
-        self.parsed_emails_collection = self.db_client.collection(
-            u'parsed_emails')
+        if self.config.persist_to_firestore:
+            self.db_client = firestore.Client(
+                credentials=creds)
+            self.parsed_emails_collection = self.db_client.collection(
+                u'parsed_emails')
+        else:
+            self.db_client = None
+            self.parsed_emails_collection = None
 
         # connect to google drive
-        self.drive_service = build("drive", "v3", credentials=creds)
+        if self.config.upload_to_drive:
+            self.drive_service = build('drive', 'v3', credentials=creds)
+        else:
+            self.drive_service = None
 
     async def _upload_attachments(self, parsed_email: ParsedEmail):
         if not self.config.upload_to_drive:
@@ -111,27 +118,27 @@ class Syncer:
         for attachment in parsed_email.attachments:
             try:
                 file_content_b64 = base64.urlsafe_b64encode(
-                    attachment.content.encode("utf-8")).decode("utf-8")
+                    attachment.content.encode('utf-8')).decode('utf-8')
 
                 file_metadata = {
-                    "name": attachment.filename,
-                    "parents": [self.config.folder_id],
-                    "mimeType": attachment.content_type,
+                    'name': attachment.filename,
+                    'parents': [self.config.folder_id],
+                    'mimeType': attachment.content_type,
                 }
 
                 file_content = {
-                    "data": file_content_b64,
-                    "mimeType": attachment.content_type,
-                    "encoding": "base64"
+                    'data': file_content_b64,
+                    'mimeType': attachment.content_type,
+                    'encoding': 'base64'
                 }
 
                 file = self.drive_service.files().create(
                     body=file_metadata, media_body=file_content).execute()
 
-                attachment.drive_url = file["webContentLink"]
+                attachment.drive_url = file['webContentLink']
             except Exception as e:
                 logging.error(
-                    "failed to upload parsed email %s attachment to google drive due to %s", parsed_email.uid, e)
+                    'failed to upload parsed email %s attachment to google drive due to %s', parsed_email.uid, e)
 
     async def _persist_parsed_email(self, parsed_email: ParsedEmail):
         if not self.config.persist_to_firestore:
@@ -146,8 +153,12 @@ class Syncer:
                 existing_mail_ref.update({
                     'last_parsed_at': parsed_email.last_parsed_at
                 })
+                self.logger.info('updating last_parted_at for parsed email %s to %s',
+                                 parsed_email.uid, parsed_email.last_parsed_at)
             else:
                 existing_mail_ref.set(parsed_email)
+                self.logger.info(
+                    'persisted context about parsed email %s', parsed_email.uid)
         except Exception as e:
             self.logger.error(
                 'failed to write parsed email %s to firestore due to %s', parsed_email.uid, e)
@@ -155,14 +166,20 @@ class Syncer:
     async def sync(self):
         # peforms processing on each provided credential
         for credential in self.config.credentials:
+            self.logger.info('processing emails sent to %s', credential.email)
+
             mailbox = self.mailboxes[credential.email]
 
             # process emails from each provided email source
             for sent_from in self.configs.mails_from:
-                _, data = mailbox.search(None, f"FROM {sent_from}")
+                self.logger.info(
+                    'processing emails sent from %s', credential.email)
+                _, data = mailbox.search(None, f'FROM {sent_from}')
 
                 for email_id in data[0].split():
-                    _, data = mailbox.fetch(email_id, "(RFC822)")
+                    self.logger.info('processing email %s', email_id)
+
+                    _, data = mailbox.fetch(email_id, '(RFC822)')
                     raw_email_message = data[0][1]
                     email_message = email.message_from_bytes(
                         raw_email_message)
@@ -184,7 +201,7 @@ class Syncer:
 
                     for part in email_message.walk():
                         # parse attachements
-                        if part.get_content_disposition() == "attachment":
+                        if part.get_content_disposition() == 'attachment':
                             filename = part.get_filename()
                             content = part.get_payload(decode=True)
                             content_type = part.get_content_type()
@@ -194,8 +211,9 @@ class Syncer:
                                 content_type=content_type,
                             )
                             parsed_email.attachments.append(attachment)
-                    
-                    self.logger.info("parsed email %s", pprint.pformat(parsed_email))
+
+                    self.logger.info('parsed email %s',
+                                     pprint.pformat(parsed_email))
 
                     await self._upload_attachments(parsed_email)
                     await self._persist_parsed_email(parsed_email)
