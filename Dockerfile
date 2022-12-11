@@ -9,9 +9,8 @@ COPY Pipfile .
 COPY Pipfile.lock .
 
 # Install the required Python packages
-RUN python -m pip install --upgrade pipenv \
+RUN pip install --upgrade pipenv \
   pipenv install
-
 
 # Copy the rest of the files to the working directory
 COPY . .
