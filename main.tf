@@ -1,15 +1,20 @@
 variable "project_id" {
-  type = string
+  type      = string
   sensitive = true
 }
 
 variable "location" {
-  type = string
+  type      = string
   sensitive = true
 }
 
 variable "service_account" {
-  type = string
+  type      = string
+  sensitive = true
+}
+
+variable "access_token" {
+  type      = string
   sensitive = true
 }
 
@@ -24,22 +29,21 @@ terraform {
 
 # Configure the Google provider
 provider "google" {
-  project = var.project_id
-  region  = var.location
+  project      = var.project_id
+  region       = var.location
+  access_token = var.access_token
 }
 
 # Enable cloud run service
 resource "google_project_service" "cloud_run" {
-  project                    = var.project_id
-  service                    = "run.googleapis.com"
-  disable_dependent_services = true
+  project = var.project_id
+  service = "run.googleapis.com"
 }
 
 # Enable cloud schduler service
 resource "google_project_service" "cloud_scheduler" {
-  project                    = var.project_id
-  service                    = "cloudscheduler.googleapis.com"
-  disable_dependent_services = true
+  project = var.project_id
+  service = "cloudscheduler.googleapis.com"
 }
 
 # Create a Cloud Run service
@@ -75,6 +79,7 @@ resource "google_cloud_scheduler_job" "docs_sync_job" {
     uri         = google_cloud_run_service.docs_sync_service.status[0].url
   }
   depends_on = [
+    google_project_service.cloud_scheduler,
     google_cloud_run_service.docs_sync_service
   ]
 }
