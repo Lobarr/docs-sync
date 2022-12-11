@@ -16,6 +16,9 @@ from google.oauth2.credentials import Credentials
 from src.configs import Config, Credential
 
 
+_PARSED_EMAILS_COLLECTION = 'parsed_emails'
+
+
 @dataclasses.dataclass
 class EmailAttachment:
     filename: str = dataclasses.field(default_factory=str)
@@ -104,7 +107,7 @@ class Syncer:
             self.db_client = firestore.Client(
                 credentials=creds)
             self.parsed_emails_collection = self.db_client.collection(
-                u'parsed_emails')
+                _PARSED_EMAILS_COLLECTION)
         else:
             self.db_client = None
             self.parsed_emails_collection = None
