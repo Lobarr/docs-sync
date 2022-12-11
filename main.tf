@@ -13,11 +13,6 @@ variable "service_account" {
   sensitive = true
 }
 
-variable "access_token" {
-  type      = string
-  sensitive = true
-}
-
 terraform {
   required_providers {
     google = {
@@ -31,7 +26,6 @@ terraform {
 provider "google" {
   project      = var.project_id
   region       = var.location
-  access_token = var.access_token
 }
 
 # Enable cloud run service
