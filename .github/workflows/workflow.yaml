@@ -1,14 +1,14 @@
-# Define the list of folders to run the step against
 permissions:
   pull-requests: write
   packages: write
+  contents: read
+  id-token: write
 on: push
 name: workflow
 env:
   TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
   TF_VAR_location: ${{ secrets.LOCATION }}
-  TF_VAR_access_token: ${{ secrets.ACCESS_TOKEN }}
-  TF_VAR_billing_account: ${{ secrets.BILLING_ACCOUNT }}
+  TF_VAR_service_account: ${{ secrets.SERVICE_ACCOUNT }}
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -55,52 +55,35 @@ jobs:
           docker build -t $IMAGE_NAME:$TAG .
           docker push $IMAGE_NAME:$TAG
 
+      - name: Authenticate to gcloud
+        uses: "google-github-actions/auth@v1"
+        with:
+          credentials_json: "${{ secrets.GCP_CREDENTIALS }}"
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
       # Setup a terraform enviornment
       - uses: hashicorp/setup-terraform@v2
 
-      # check tf/setup terraform configs
-      - name: Terraform fmt tf/setup
+      - name: Terraform fmt
         run: |
           terraform fmt -check
         continue-on-error: true
-        working-directory: tf/setup
 
-      - name: Terraform Init tf/setup
+      - name: Terraform Init
         run: |
-          terraform init
-        working-directory: tf/setup
+          terraform init -backend-config="type=gcs" \
+                -backend-config="bucket=${{ secrets.BUCKET_NAME }}" \
+                -backend-config="prefix=tf/state" \
 
-      - name: Terraform Validate tf/setup
-        run: |
-          terraform validate -no-color
-        working-directory: tf/setup
-
-      - name: Terraform Plan tf/setup
-        run: |
-          terraform plan -input=false -no-color -out tf.plan
-        working-directory: tf/setup
-
-      # check tf/infra terraform configs
-      - name: Terraform fmt tf/infra
-        run: |
-          terraform fmt -check
-        continue-on-error: true
-        working-directory: tf/infra
-
-      - name: Terraform Init tf/infra
-        run: |
-          terraform init
-        working-directory: tf/infra
-
-      - name: Terraform Validate tf/infra
+      - name: Terraform Validate
         run: |
           terraform validate -no-color
-        working-directory: tf/infra
 
-      - name: Terraform Plan tf/infra
+      - name: Terraform Plan
         run: |
           terraform plan -input=false -no-color -out tf.plan
-        working-directory: tf/infra
 
       - uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
@@ -160,6 +143,6 @@ jobs:
               })
             }
 
-      # - name: Terraform Apply
-      #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      #   run: terraform apply -input=false tf.plan
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -input=false tf.plan
