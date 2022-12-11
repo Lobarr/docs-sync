@@ -73,6 +73,7 @@ resource "google_cloud_scheduler_job" "docs_sync_job" {
     uri         = google_cloud_run_service.docs_sync_service.status[0].url
   }
   depends_on = [
+    google_project_service.cloud_scheduler,
     google_cloud_run_service.docs_sync_service
   ]
 }

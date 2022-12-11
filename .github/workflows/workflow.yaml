@@ -68,7 +68,9 @@ jobs:
         uses: google-github-actions/setup-gcloud@v1
 
       - name: "Show information about gcloud CLI"
-        run: "gcloud info"
+        run: |
+          gcloud auth application-default login
+          gcloud info
 
       # Setup a terraform enviornment
       - uses: hashicorp/setup-terraform@v2
@@ -156,4 +158,5 @@ jobs:
 
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: terraform apply -input=false tf.plan -debug
+        run: |
+          terraform apply -input=false tf.plan -debug
