@@ -48,4 +48,6 @@ jobs:
       # Push the Docker image to Google Container Registry
       - name: Push Docker image
         run: |
-          docker push $IMAGE_NAME
+          IMAGE_NAME="docs-sync"
+          TAG="${{ github.sha }}"
+          docker push $IMAGE_NAME:$TAG
