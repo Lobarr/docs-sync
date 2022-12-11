@@ -34,11 +34,6 @@ jobs:
           IMAGE_NAME="${{ github.repository }}-${{ github.sha }}"
           echo "Image name: $IMAGE_NAME"
 
-      # Set the IMAGE_NAME environment variable
-      - name: Set environment variable
-        run: |
-          echo "::set-env name=IMAGE_NAME::$IMAGE_NAME"
-
       # # Install Docker
       # - name: Install Docker
       #   uses: actions/setup-docker@v1
