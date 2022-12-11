@@ -13,11 +13,20 @@ jobs:
         with:
           python-version: 3.11
 
-      # Install required Python packages
-      - name: Install dependencies
+      # Install dependencies
+      - name: Install pipenv
         run: |
-          pip install pipenv
-          pipenv run install
+          python -m pip install --upgrade pipenv wheel
+      - id: cache-pipenv
+        uses: actions/cache@v1
+        with:
+          path: ~/.local/share/virtualenvs
+          key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
+
+      - name: Install dependencies
+        if: steps.cache-pipenv.outputs.cache-hit != 'true'
+        run: |
+          pipenv install --deploy --dev
 
       # Create a unique Docker image name using GitHub Actions environment variables
       - name: Create image name
