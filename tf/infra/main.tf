@@ -29,7 +29,6 @@ provider "google" {
   region       = var.location
   access_token = var.access_token
 }
-
 # Create a project
 resource "google_project" "doc_sync_project" {
   name            = "Doc Sync Project"

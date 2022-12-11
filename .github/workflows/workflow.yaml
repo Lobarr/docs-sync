@@ -1,3 +1,4 @@
+# Define the list of folders to run the step against
 permissions:
   pull-requests: write
   packages: write
@@ -57,23 +58,69 @@ jobs:
       # Setup a terraform enviornment
       - uses: hashicorp/setup-terraform@v2
 
-      - name: Terraform fmt
-        id: fmt
-        run: terraform fmt -check
+      # check tf/setup terraform configs
+      - name: Terraform fmt tf/setup
+        id: fmt tf/setup
+        run: |
+          terraform fmt -check
         continue-on-error: true
+        working-directory: tf/setup
 
-      - name: Terraform Init
-        id: init
-        run: terraform init
+      - name: Terraform Init tf/setup
+        id: init tf/setup
+        run: |
+          terraform init
+        working-directory: tf/setup
 
-      - name: Terraform Validate
-        id: validate
-        run: terraform validate -no-color
+      - name: Terraform Validate tf/setup
+        id: validate tf/setup
+        run: |
+          terraform validate -no-color
+        working-directory: tf/setup
 
-      - name: Terraform Plan
-        id: plan
-        run: terraform plan -no-color
+      - name: Terraform Plan tf/setup
+        id: plan tf/setup
+        run: |
+          terraform plan -input=false -no-color -out tf.plan
+        working-directory: tf/setup
+
+      - name: Terraform Show tf/setup
+        id: show tf/setup
+        run: |
+          terraform show -no-color tf.plan
+        working-directory: tf/setup
+
+      # check tf/infra terraform configs
+      - name: Terraform fmt tf/infra
+        id: fmt tf/infra
+        run: |
+          terraform fmt -check
         continue-on-error: true
+        working-directory: tf/infra
+
+      - name: Terraform Init tf/infra
+        id: init tf/infra
+        run: |
+          terraform init
+        working-directory: tf/infra
+
+      - name: Terraform Validate tf/infra
+        id: validate tf/infra
+        run: |
+          terraform validate -no-color
+        working-directory: tf/infra
+
+      - name: Terraform Plan tf/infra
+        id: plan tf/infra
+        run: |
+          terraform plan -input=false -no-color -out tf.plan
+        working-directory: tf/infra
+
+      - name: Terraform Show tf/infra
+        id: show tf/infra
+        run: |
+          terraform show -no-color tf.plan
+        working-directory: tf/infra
 
       - uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
@@ -132,3 +179,7 @@ jobs:
                 body: output
               })
             }
+
+      # - name: Terraform Apply
+      #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      #   run: terraform apply -input=false tf.plan
