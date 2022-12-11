@@ -7,3 +7,6 @@ terraform:
 	terraform init
 	terraform validate
 	terraform plan
+
+requirments: 
+	pipenv requirements > requirments.txt
