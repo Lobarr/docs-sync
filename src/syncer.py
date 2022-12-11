@@ -211,7 +211,7 @@ class Syncer:
                 )
                 parsed_email.attachments.append(attachment)
 
-                self.logger.info('parsed attachment %s of size %d and content type %s for email %s',
+                self.logger.info('parsed attachment \"%s\" of size %d and content type %s for email %s',
                                  attachment.filename, attachment.content_size, attachment.content_type, parsed_email.uid)
 
         if not parsed_email.attachments:
