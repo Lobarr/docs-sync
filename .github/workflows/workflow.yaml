@@ -80,11 +80,6 @@ jobs:
           terraform plan -input=false -no-color -out tf.plan
         working-directory: tf/setup
 
-      - name: Terraform Show tf/setup
-        run: |
-          terraform show -no-color tf.plan
-        working-directory: tf/setup
-
       # check tf/infra terraform configs
       - name: Terraform fmt tf/infra
         run: |
@@ -105,11 +100,6 @@ jobs:
       - name: Terraform Plan tf/infra
         run: |
           terraform plan -input=false -no-color -out tf.plan
-        working-directory: tf/infra
-
-      - name: Terraform Show tf/infra
-        run: |
-          terraform show -no-color tf.plan
         working-directory: tf/infra
 
       - uses: actions/github-script@v6
