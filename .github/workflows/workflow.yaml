@@ -31,9 +31,10 @@ jobs:
       # Build the Docker image using the IMAGE_NAME environment variable
       - name: Build Docker image
         run: |
-          IMAGE_NAME="docs-sync-${{ github.sha }}"
+          IMAGE_NAME="docs-sync"
+          TAG="${{ github.sha }}"
           echo "Image name: $IMAGE_NAME"
-          docker build -t $IMAGE_NAME .
+          docker build -t $IMAGE_NAME:$TAG .
 
       # # Authenticate to Google Container Registry
       # - name: Authenticate to Google Container Registry
