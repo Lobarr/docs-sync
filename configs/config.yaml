@@ -1,0 +1,16 @@
+credentials:
+  - email: email@gmail.com 
+    password: some-password
+    imap_server: imap.gmail.com 
+    imap_port: 993
+mails_from:
+  - from@gmail.com
+folder_id: some-folder-id
+project_id: some-google-cloud-project-id
+google_creds:
+  access_token: some-access-token
+  refresh_token: some-refresh-token
+  client_id: some-client-id
+  client_secret: some-client-secret
+upload_to_drive: false
+persist_to_firestore: false

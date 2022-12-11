@@ -1,0 +1,4 @@
+configs/test.yaml
+.vim/
+outputs/
+scripts/test_syncer.sh
