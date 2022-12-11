@@ -7,4 +7,6 @@ requirments:
 	pipenv requirements > requirments.txt
 
 terraform:
-	./tf/check.sh
+	terraform init
+	terraform validate
+	terraform plan -detailed-exitcode
