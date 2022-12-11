@@ -17,6 +17,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install pipenv
+          pipenv shell
           pipenv install
 
       # Create a unique Docker image name using GitHub Actions environment variables
