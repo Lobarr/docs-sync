@@ -69,7 +69,7 @@ jobs:
 
       - name: "Show information about gcloud CLI"
         run: |
-          gcloud auth application-default login
+          gcloud --quiet auth application-default login
           gcloud info
 
       # Setup a terraform enviornment
