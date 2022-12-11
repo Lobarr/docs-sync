@@ -1,13 +1,16 @@
 variable "project_id" {
   type = string
+  sensitive = true
 }
 
 variable "location" {
   type = string
+  sensitive = true
 }
 
 variable "service_account" {
   type = string
+  sensitive = true
 }
 
 terraform {
