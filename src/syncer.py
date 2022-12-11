@@ -8,8 +8,8 @@ import imaplib
 import logging
 import pprint
 
+from dateutil import parser
 from google.cloud import firestore
-from google.cloud import exceptions
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 
@@ -33,38 +33,39 @@ class EmailAttachment:
 
     @property
     def uid(self) -> str:
-        return hashlib.sha256(
-            ':'.join([
-                self.file_name,
-                self.content_hash,
-                self.content_type,
-            ])).hexdigest()
+        payload = ':'.join([
+            self.filename,
+            self.content_hash,
+            self.content_type,
+        ]).encode('utf-8')
+        return hashlib.sha256(payload).hexdigest()
 
 
 @dataclasses.dataclass()
 class ParsedEmail:
     attachments: list[EmailAttachment] = dataclasses.field(
         default_factory=list)
-    last_parsed_at: datetime = dataclasses.field(default_factory=datetime)
+    last_parsed_at: float = dataclasses.field(default_factory=float)
     message_id: str = dataclasses.field(default_factory=str)
-    sent_at: datetime = dataclasses.field(default_factory=datetime)
+    sent_at: float = dataclasses.field(default_factory=float)
     sent_from: str = dataclasses.field(default_factory=str)
     sent_to: str = dataclasses.field(default_factory=str)
     subject: str = dataclasses.field(default_factory=str)
 
     @property
     def subject_hash(self) -> str:
-        return hashlib.sha256(self.subject).hexdigest()
+        return hashlib.sha256(self.subject.encode('utf-8')).hexdigest()
 
     @property
     def uid(self) -> str:
-        return hashlib.sha256(
-            ':'.join([
-                self.sent_from,
-                self.sent_to,
-                self.subject_hash,
-                self.created_at,
-            ])).hexdigest()
+        payload = ':'.join([
+            self.sent_from,
+            self.sent_to,
+            self.subject_hash,
+            self.message_id,
+            str(self.sent_at),
+        ]).encode('utf-8')
+        return hashlib.sha256(payload).hexdigest()
 
 
 class Syncer:
@@ -171,9 +172,9 @@ class Syncer:
             mailbox = self.mailboxes[credential.email]
 
             # process emails from each provided email source
-            for sent_from in self.configs.mails_from:
+            for sent_from in self.config.mails_from:
                 self.logger.info(
-                    'processing emails sent from %s', credential.email)
+                    'processing emails sent from %s', sent_from)
                 _, data = mailbox.search(None, f'FROM {sent_from}')
 
                 for email_id in data[0].split():
@@ -197,7 +198,8 @@ class Syncer:
                         parsed_email.message_id = email_message['message-id']
 
                     if 'date' in email_message:
-                        parsed_email.sent_at = email_message['date']
+                        parsed_email.sent_at = parser.parse(
+                            email_message['date']).timestamp()
 
                     for part in email_message.walk():
                         # parse attachements
@@ -213,7 +215,7 @@ class Syncer:
                             parsed_email.attachments.append(attachment)
 
                     self.logger.info('parsed email %s',
-                                     pprint.pformat(parsed_email))
+                                     parsed_email.uid)
 
                     await self._upload_attachments(parsed_email)
                     await self._persist_parsed_email(parsed_email)
