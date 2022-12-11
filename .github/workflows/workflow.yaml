@@ -29,9 +29,9 @@ jobs:
         run: |
           echo "::set-env name=IMAGE_NAME::$IMAGE_NAME"
 
-      # Install Docker
-      - name: Install Docker
-        uses: actions/setup-docker@v1
+      # # Install Docker
+      # - name: Install Docker
+      #   uses: actions/setup-docker@v1
 
       # Build the Docker image using the IMAGE_NAME environment variable
       - name: Build Docker image
