@@ -203,7 +203,7 @@ class Syncer:
 
                     for part in email_message.walk():
                         # parse attachements
-                        if part.get_content_disposition() == 'attachment':
+                        if part.get_content_disposition() == 'attachment' and part.get_content_type() != "text/html":
                             filename = part.get_filename()
                             content = part.get_payload(decode=True)
                             content_type = part.get_content_type()
@@ -213,6 +213,14 @@ class Syncer:
                                 content_type=content_type,
                             )
                             parsed_email.attachments.append(attachment)
+
+                            self.logger.info('parsed attachment %s of size %d and content type %s for email %s',
+                                             attachment.filename, attachment.content_size, attachment.content_type, parsed_email.uid)
+
+                    if not parsed_email.attachments:
+                        self.logger.info(
+                            'skipping email %s becuase it has no attachments', parsed_email.uid)
+                        continue
 
                     self.logger.info('parsed email %s',
                                      parsed_email.uid)
