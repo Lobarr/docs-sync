@@ -16,7 +16,8 @@ jobs:
       # Install required Python packages
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install pipenv
+          pipenv install
 
       # Create a unique Docker image name using GitHub Actions environment variables
       - name: Create image name
