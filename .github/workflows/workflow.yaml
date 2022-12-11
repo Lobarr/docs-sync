@@ -31,8 +31,6 @@ jobs:
         with:
           path: /var/lib/docker/
           key: ${{ runner.os }}-docker-${{ hashFiles('**/Dockerfile') }}
-          restore-keys: |
-            ${{ runner.os }}-docker-
 
       - name: Install dependencies
         if: steps.cache-pipenv.outputs.cache-hit != 'true'
