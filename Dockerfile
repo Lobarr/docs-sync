@@ -4,11 +4,14 @@ FROM python:3.11
 # Set the working directory in the Docker image
 WORKDIR /docs-sync
 
-# Copy the requirements.txt file to the working directory
-COPY requirements.txt .
+# Copy the Pipfiles to the working directory
+COPY Pipfile .
+COPY Pipfile.lock .
 
 # Install the required Python packages
-RUN pip install -r requirements.txt
+RUN python -m pip install --upgrade pipenv \
+  pipenv install
+
 
 # Copy the rest of the files to the working directory
 COPY . .
