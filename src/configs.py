@@ -23,7 +23,6 @@ class Config:
     credentials: list[Credential] = dataclasses.field(default_factory=list)
     mails_from: list[str] = dataclasses.field(default_factory=list)
     folder_id: str = dataclasses.field(default_factory=str)
-    project_id: str = dataclasses.field(default_factory=str)
     google_creds: GoogleCreds = dataclasses.field(default_factory=GoogleCreds)
     upload_to_drive: bool = dataclasses.field(default_factory=bool)
     persist_to_firestore: bool = dataclasses.field(default_factory=bool)

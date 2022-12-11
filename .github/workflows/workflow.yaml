@@ -1,0 +1,52 @@
+on: push
+name: workflow 
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the code from the repository
+      - uses: actions/checkout@master
+
+      # Set up a Python environment
+      - name: Set up Python environment
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.11
+
+      # Install required Python packages
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      # Create a unique Docker image name using GitHub Actions environment variables
+      - name: Create image name
+        run: |
+          IMAGE_NAME="${{ github.repository }}-${{ github.sha }}"
+          echo "Image name: $IMAGE_NAME"
+
+      # Set the IMAGE_NAME environment variable
+      - name: Set environment variable
+        run: |
+          echo "::set-env name=IMAGE_NAME::$IMAGE_NAME"
+
+      # Install Docker
+      - name: Install Docker
+        uses: actions/setup-docker@v1
+
+      # Build the Docker image using the IMAGE_NAME environment variable
+      - name: Build Docker image
+        run: |
+          docker build -t $IMAGE_NAME .
+
+      # # Authenticate to Google Container Registry
+      # - name: Authenticate to Google Container Registry
+      #   uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+      #   with:
+      #     service_account_email: ${{ secrets.GCLOUD_SERVICE_ACCOUNT_EMAIL }}
+      #     service_account_key: ${{ secrets.GCLOUD_SERVICE_ACCOUNT_KEY }}
+      #     project_id: ${{ secrets.GCLOUD_PROJECT_ID }}
+
+      # # Push the Docker image to Google Container Registry
+      # - name: Push Docker image
+      #   run: |
+      #     docker push $IMAGE_NAME

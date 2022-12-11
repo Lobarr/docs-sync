@@ -86,7 +86,8 @@ class Syncer:
                 mailbox.select('inbox')
                 self.mailboxes[credential.email] = mailbox
             except Exception as e:
-                logging.fatal('failed to create mailbox due to %s', e)
+                logging.fatal(
+                    'failed to create mailbox to %s due to %s', credential.email, e)
                 exit(1)
 
         info = {
