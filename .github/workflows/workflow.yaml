@@ -25,13 +25,6 @@ jobs:
           path: ~/.local/share/virtualenvs
           key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
 
-      # Cache the Docker build
-      - name: Cache Docker build
-        uses: actions/cache@v3
-        with:
-          path: /var/lib/docker/
-          key: ${{ runner.os }}-docker-${{ hashFiles('**/Dockerfile') }}
-
       - name: Install dependencies
         if: steps.cache-pipenv.outputs.cache-hit != 'true'
         run: |
