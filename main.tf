@@ -26,7 +26,6 @@ terraform {
 provider "google" {
   project      = var.project_id
   region       = var.location
-  impersonate_service_account = var.service_account
 }
 
 # Enable cloud run service
