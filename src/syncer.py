@@ -13,7 +13,7 @@ from google.cloud import firestore
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 
-from src.configs import Config
+from src.configs import Config, Credential
 
 
 @dataclasses.dataclass
@@ -45,6 +45,7 @@ class EmailAttachment:
 class ParsedEmail:
     attachments: list[EmailAttachment] = dataclasses.field(
         default_factory=list)
+    email_id: str = dataclasses.field(default_factory=str)
     last_parsed_at: float = dataclasses.field(default_factory=float)
     message_id: str = dataclasses.field(default_factory=str)
     sent_at: float = dataclasses.field(default_factory=float)
@@ -63,6 +64,7 @@ class ParsedEmail:
             self.sent_to,
             self.subject_hash,
             self.message_id,
+            self.email_id,
             str(self.sent_at),
         ]).encode('utf-8')
         return hashlib.sha256(payload).hexdigest()
@@ -164,6 +166,65 @@ class Syncer:
             self.logger.error(
                 'failed to write parsed email %s to firestore due to %s', parsed_email.uid, e)
 
+    async def _process_email(
+        self,
+        email_id: bytes,
+        mailbox: imaplib.IMAP4_SSL,
+        sent_from: str,
+        credential: Credential,
+    ):
+        decoded_email_id = email_id.decode('utf-8')
+        self.logger.info('processing email %s', decoded_email_id)
+
+        _, data = mailbox.fetch(email_id, '(RFC822)')
+        raw_email_message = data[0][1]
+        email_message = email.message_from_bytes(
+            raw_email_message)
+
+        parsed_email = ParsedEmail(
+            last_parsed_at=datetime.datetime.now(),
+            sent_from=sent_from,
+            sent_to=credential.email,
+            email_id=decoded_email_id,
+        )
+
+        if 'subject' in email_message:
+            parsed_email.subject = email_message['subject']
+
+        if 'message-id' in email_message:
+            parsed_email.message_id = email_message['message-id']
+
+        if 'date' in email_message:
+            parsed_email.sent_at = parser.parse(
+                email_message['date']).timestamp()
+
+        for part in email_message.walk():
+            # parse attachements
+            if part.get_content_disposition() == 'attachment' and part.get_content_type() != "text/html":
+                filename = part.get_filename()
+                content = part.get_payload(decode=True)
+                content_type = part.get_content_type()
+                attachment = EmailAttachment(
+                    filename=filename,
+                    content=content,
+                    content_type=content_type,
+                )
+                parsed_email.attachments.append(attachment)
+
+                self.logger.info('parsed attachment %s of size %d and content type %s for email %s',
+                                 attachment.filename, attachment.content_size, attachment.content_type, parsed_email.uid)
+
+        if not parsed_email.attachments:
+            self.logger.info(
+                'skipping email %s becuase it has no attachments', parsed_email.uid)
+            return
+
+        self.logger.info('parsed email %s',
+                         parsed_email.uid)
+
+        await self._upload_attachments(parsed_email)
+        await self._persist_parsed_email(parsed_email)
+
     async def sync(self):
         # peforms processing on each provided credential
         for credential in self.config.credentials:
@@ -178,52 +239,4 @@ class Syncer:
                 _, data = mailbox.search(None, f'FROM {sent_from}')
 
                 for email_id in data[0].split():
-                    self.logger.info('processing email %s', email_id)
-
-                    _, data = mailbox.fetch(email_id, '(RFC822)')
-                    raw_email_message = data[0][1]
-                    email_message = email.message_from_bytes(
-                        raw_email_message)
-
-                    parsed_email = ParsedEmail(
-                        last_parsed_at=datetime.datetime.now(),
-                        sent_from=sent_from,
-                        sent_to=credential.email,
-                    )
-
-                    if 'subject' in email_message:
-                        parsed_email.subject = email_message['subject']
-
-                    if 'message-id' in email_message:
-                        parsed_email.message_id = email_message['message-id']
-
-                    if 'date' in email_message:
-                        parsed_email.sent_at = parser.parse(
-                            email_message['date']).timestamp()
-
-                    for part in email_message.walk():
-                        # parse attachements
-                        if part.get_content_disposition() == 'attachment' and part.get_content_type() != "text/html":
-                            filename = part.get_filename()
-                            content = part.get_payload(decode=True)
-                            content_type = part.get_content_type()
-                            attachment = EmailAttachment(
-                                filename=filename,
-                                content=content,
-                                content_type=content_type,
-                            )
-                            parsed_email.attachments.append(attachment)
-
-                            self.logger.info('parsed attachment %s of size %d and content type %s for email %s',
-                                             attachment.filename, attachment.content_size, attachment.content_type, parsed_email.uid)
-
-                    if not parsed_email.attachments:
-                        self.logger.info(
-                            'skipping email %s becuase it has no attachments', parsed_email.uid)
-                        continue
-
-                    self.logger.info('parsed email %s',
-                                     parsed_email.uid)
-
-                    await self._upload_attachments(parsed_email)
-                    await self._persist_parsed_email(parsed_email)
+                    await self._process_email(email_id, mailbox, sent_from, credential)
