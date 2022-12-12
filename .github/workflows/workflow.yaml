@@ -79,9 +79,7 @@ jobs:
       - name: Terraform Init
         id: init
         run: |
-          terraform init -backend-config="type=gcs" \
-                -backend-config="bucket=${{ secrets.BUCKET_NAME }}" \
-                -backend-config="prefix=tf/state" \
+          terraform init
 
       - name: Terraform Validate
         id: validate
