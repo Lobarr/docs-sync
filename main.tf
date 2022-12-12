@@ -28,17 +28,17 @@ provider "google" {
   region       = var.location
 }
 
-# Enable cloud run service
-resource "google_project_service" "cloud_run" {
-  project = var.project_id
-  service = "run.googleapis.com"
-}
+# # Enable cloud run service
+# resource "google_project_service" "cloud_run" {
+#   project = var.project_id
+#   service = "run.googleapis.com"
+# }
 
-# Enable cloud schduler service
-resource "google_project_service" "cloud_scheduler" {
-  project = var.project_id
-  service = "cloudscheduler.googleapis.com"
-}
+# # Enable cloud schduler service
+# resource "google_project_service" "cloud_scheduler" {
+#   project = var.project_id
+#   service = "cloudscheduler.googleapis.com"
+# }
 
 # Create a Cloud Run service
 resource "google_cloud_run_service" "docs_sync_service" {
