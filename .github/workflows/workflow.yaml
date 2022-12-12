@@ -64,7 +64,7 @@ jobs:
 
       - name: "Show information about gcloud CLI"
         run: |
-          gcloud auth configure-docker
+          gcloud auth configure-docker --quiet
           gcloud info
 
       # Setup a terraform enviornment
