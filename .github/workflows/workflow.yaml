@@ -11,8 +11,8 @@ env:
   TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
   TF_VAR_location: ${{ secrets.LOCATION }}
   TF_VAR_service_account: ${{ secrets.SERVICE_ACCOUNT }}
-  TF_VAR_access_token: ${{ secrets.GCP_API_KEY }}
-  IMAGE_NAME: ghcr.io/lobarr/docs-sync:${{ github.sha }}
+  BUCKET_NAME: docs-sync-tfstate
+  IMAGE_NAME: gcr.io/${{ secrets.PROJECT_ID }}/docs-sync:${{ github.sha }}
   GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 jobs:
   checks:
@@ -44,13 +44,6 @@ jobs:
         run: |
           pipenv install
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       # Build the Docker image using the IMAGE_NAME environment variable
       - name: Build Docker image
         run: |
@@ -58,7 +51,7 @@ jobs:
           docker build -t ${{ env.IMAGE_NAME }} .
 
       - name: Push Docker image
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: docker push ${{ env.IMAGE_NAME }}
 
       - name: Authenticate to gcloud
@@ -71,6 +64,7 @@ jobs:
 
       - name: "Show information about gcloud CLI"
         run: |
+          gcloud auth configure-docker
           gcloud info
 
       # Setup a terraform enviornment

@@ -20,25 +20,29 @@ terraform {
       version = "4.45.0"
     }
   }
+  backend "gcs" {
+    bucket = "docs-sync-tfstate"
+    prefix = "tf/state"
+  }
 }
 
 # Configure the Google provider
 provider "google" {
-  project      = var.project_id
-  region       = var.location
+  project = var.project_id
+  region  = var.location
 }
 
-# # Enable cloud run service
-# resource "google_project_service" "cloud_run" {
-#   project = var.project_id
-#   service = "run.googleapis.com"
-# }
+# Enable cloud run service
+resource "google_project_service" "cloud_run" {
+  project = var.project_id
+  service = "run.googleapis.com"
+}
 
-# # Enable cloud schduler service
-# resource "google_project_service" "cloud_scheduler" {
-#   project = var.project_id
-#   service = "cloudscheduler.googleapis.com"
-# }
+# Enable cloud schduler service
+resource "google_project_service" "cloud_scheduler" {
+  project = var.project_id
+  service = "cloudscheduler.googleapis.com"
+}
 
 # Create a Cloud Run service
 resource "google_cloud_run_service" "docs_sync_service" {
@@ -48,7 +52,7 @@ resource "google_cloud_run_service" "docs_sync_service" {
   template {
     spec {
       containers {
-        image = "ghcr.io/lobarr/docs-sync"
+        image = "ghcr.io/lobarr/docs-sync:latest"
       }
       service_account_name = var.service_account
     }
@@ -59,7 +63,9 @@ resource "google_cloud_run_service" "docs_sync_service" {
     latest_revision = true
   }
 
-  depends_on = [google_project_service.cloud_run]
+  depends_on = [
+    # google_project_service.cloud_run
+  ]
 }
 
 # Create a Cloud Scheduler job to run the Cloud Run service
@@ -73,7 +79,7 @@ resource "google_cloud_scheduler_job" "docs_sync_job" {
     uri         = google_cloud_run_service.docs_sync_service.status[0].url
   }
   depends_on = [
-    google_project_service.cloud_scheduler,
+    # google_project_service.cloud_scheduler,
     google_cloud_run_service.docs_sync_service
   ]
 }
