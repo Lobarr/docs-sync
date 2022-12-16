@@ -1,5 +1,5 @@
 # Use a pre-existing Python image as the base image for our Docker image
-FROM python:3.11
+FROM python:3.11-alpine
 
 # Set the working directory in the Docker image
 WORKDIR /docs-sync
