@@ -8,11 +8,10 @@ on:
   - pull_request
 name: workflow
 env:
-  IMAGE_NAME: gcr.io/${{ secrets.PROJECT_ID }}/docs-sync:${{ github.sha }}
   TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
   TF_VAR_location: ${{ secrets.LOCATION }}
   TF_VAR_service_account: ${{ secrets.SERVICE_ACCOUNT }}
-  TF_VAR_docs_sync_image: ${{ env.IMAGE_NAME }}
+  TF_VAR_docs_sync_image: gcr.io/${{ secrets.PROJECT_ID }}/docs-sync:${{ github.sha }}
   BUCKET_NAME: docs-sync-tfstate
   GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 jobs:
@@ -58,15 +57,15 @@ jobs:
         run: |
           pipenv install
 
-      # Build the Docker image using the IMAGE_NAME environment variable
+      # Build the Docker image using the TF_VAR_docs_sync_image environment variable
       - name: Build Docker image
         run: |
-          echo "Image name: ${{ env.IMAGE_NAME }}"
-          docker build -t ${{ env.IMAGE_NAME }} .
+          echo "Image name: ${{ env.TF_VAR_docs_sync_image }}"
+          docker build -t ${{ env.TF_VAR_docs_sync_image }} .
 
       - name: Push Docker image
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: docker push ${{ env.IMAGE_NAME }}
+        run: docker push ${{ env.TF_VAR_docs_sync_image }}
 
       # Setup a terraform enviornment
       - uses: hashicorp/setup-terraform@v2
