@@ -140,6 +140,10 @@ class Syncer:
                 file_content_b64 = base64.urlsafe_b64encode(
                     attachment.content.encode('utf-8')).decode('utf-8')
 
+                # TODO: evaluate google drive 'properties' as an option
+                # for a data store to remove the firestore dependency.
+                # the only query we care about is 'has this email been syned'
+                # refer to https://developers.google.com/drive/api/guides/search-files#custom and https://developers.google.com/drive/api/guides/properties
                 file_metadata = {
                     'name': attachment.filename,
                     'parents': [self.config.folder_id],
