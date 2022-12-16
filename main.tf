@@ -86,7 +86,11 @@ resource "google_cloud_run_service_iam_member" "scheduler_invoke_docs_sync" {
   location = var.location
   service  = google_cloud_run_service.docs_sync.name
   role     = "roles/run.invoker"
-  member   = "serviceAccount:${google_service_account.cloud_scheuler_invoker.email}"
+  member   = "serviceAccount:${google_service_account.cloud_scheduler_invoker.email}"
+  depends_on = [
+    google_cloud_run_service.docs_sync,
+    google_service_account.cloud_scheduler_invoker
+  ]
 }
 
 # Create a Cloud Scheduler job to run the Cloud Run service
@@ -100,8 +104,9 @@ resource "google_cloud_scheduler_job" "docs_sync_job" {
     uri         = google_cloud_run_service.docs_sync.status[0].url
   }
   depends_on = [
-    # google_project_service.cloud_scheduler,
-    google_cloud_run_service.docs_sync
+    google_cloud_run_service.docs_sync,
+    google_service_account.cloud_scheduler_invoker,
+    google_cloud_run_service_iam_member.scheduler_invoke_docs_sync
   ]
 }
 
