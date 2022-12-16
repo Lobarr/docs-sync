@@ -45,8 +45,8 @@ resource "google_project_service" "services" {
 }
 
 # Create a Cloud Run service
-resource "google_cloud_run_service" "docs_sync_service" {
-  name     = "docs-sync-service"
+resource "google_cloud_run_service" "docs_sync" {
+  name     = "docs-sync"
   location = var.location
 
   template {
@@ -68,6 +68,22 @@ resource "google_cloud_run_service" "docs_sync_service" {
   ]
 }
 
+# Create serivce account for cloud scheduler to be able to invoke the cloud run service
+resource "google_service_account" "cloud_scheduler_invoker" {
+  project     = var.project_id
+  account_id  = "cloud-run-scheduler-invoker"
+  description = "cloud scheduler service account used to invoke cloud run services"
+}
+
+# Grant cloud scheduler permission to invoke the docs-sync service
+resource "google_cloud_run_service_iam_member" "scheduler_invoke_docs_sync" {
+  project  = var.project_id
+  location = var.location
+  service  = google_cloud_run_service.docs_sync.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${google_service_account.cloud_scheuler_invoker.email}"
+}
+
 # Create a Cloud Scheduler job to run the Cloud Run service
 resource "google_cloud_scheduler_job" "docs_sync_job" {
   name        = "docs-sync-job"
@@ -76,15 +92,15 @@ resource "google_cloud_scheduler_job" "docs_sync_job" {
   time_zone   = "America/New_York"
   http_target {
     http_method = "POST"
-    uri         = google_cloud_run_service.docs_sync_service.status[0].url
+    uri         = google_cloud_run_service.docs_sync.status[0].url
   }
   depends_on = [
     # google_project_service.cloud_scheduler,
-    google_cloud_run_service.docs_sync_service
+    google_cloud_run_service.docs_sync
   ]
 }
 
 # Display useful context from dpeloyments 
 output "cloud_run_service_url" {
-  value = google_cloud_run_service.docs_sync_service.status[0].url
+  value = google_cloud_run_service.docs_sync.status[0].url
 }
