@@ -35,6 +35,7 @@ provider "google" {
 # Enable required cloud services
 resource "google_project_service" "services" {
   for_each = toset([
+    "serviceusage.googleapis.com",
     "run.googleapis.com",
     "cloudscheduler.googleapis.com",
     "containerregistry.googleapis.com",
