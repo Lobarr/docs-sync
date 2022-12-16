@@ -21,6 +21,19 @@ jobs:
       # Checkout the code from the repository
       - uses: actions/checkout@master
 
+      - name: Authenticate to gcloud
+        uses: "google-github-actions/auth@v1"
+        with:
+          credentials_json: "${{ secrets.GOOGLE_CREDENTIALS }}"
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: "Show information about gcloud CLI"
+        run: |
+          gcloud auth configure-docker --quiet
+          gcloud info
+
       # Set up a Python environment
       - name: Set up Python environment
         uses: actions/setup-python@v4
@@ -53,19 +66,6 @@ jobs:
       - name: Push Docker image
         # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: docker push ${{ env.IMAGE_NAME }}
-
-      - name: Authenticate to gcloud
-        uses: "google-github-actions/auth@v1"
-        with:
-          credentials_json: "${{ secrets.GOOGLE_CREDENTIALS }}"
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-
-      - name: "Show information about gcloud CLI"
-        run: |
-          gcloud auth configure-docker --quiet
-          gcloud info
 
       # Setup a terraform enviornment
       - uses: hashicorp/setup-terraform@v2
