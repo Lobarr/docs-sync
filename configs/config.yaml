@@ -20,3 +20,5 @@ upload_to_drive: false
 persist_to_firestore: false
 # number of emails to process per credential
 emails_processed_limit: -1
+# wires up the invokation of the sync operation to an http server
+enable_http_server: false

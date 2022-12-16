@@ -26,3 +26,4 @@ class Config:
     google_creds: GoogleCreds = dataclasses.field(default_factory=GoogleCreds)
     upload_to_drive: bool = dataclasses.field(default_factory=bool)
     persist_to_firestore: bool = dataclasses.field(default_factory=bool)
+    enable_http_server: bool = dataclasses.field(default_factory=bool)

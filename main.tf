@@ -101,7 +101,7 @@ resource "google_cloud_scheduler_job" "docs_sync_job" {
   time_zone   = "America/New_York"
   http_target {
     http_method = "POST"
-    uri         = google_cloud_run_service.docs_sync.status[0].url
+    uri         = "${google_cloud_run_service.docs_sync.status[0].url}/sync"
   }
   depends_on = [
     google_cloud_run_service.docs_sync,

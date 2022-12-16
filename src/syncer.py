@@ -7,6 +7,7 @@ import hashlib
 import imaplib
 import logging
 import pprint
+import json
 
 from dateutil import parser
 from google.cloud import firestore
@@ -20,7 +21,7 @@ _PARSED_EMAILS_COLLECTION = 'parsed_emails'
 
 
 @dataclasses.dataclass
-class EmailAttachment:
+class EmailAttachment(json.JSONEncoder):
     filename: str = dataclasses.field(default_factory=str)
     content: bytes = dataclasses.field(default_factory=bytes)
     content_type: str = dataclasses.field(default_factory=str)
@@ -42,6 +43,17 @@ class EmailAttachment:
             self.content_type,
         ]).encode('utf-8')
         return hashlib.sha256(payload).hexdigest()
+
+    def default(self, o):
+        # omit self.content when serializing to json
+        return {
+            'content_hash': self.content_hash,
+            'content_size': self.content_size,
+            'content_type': self.content_type,
+            'drive_url': self.drive_url,
+            'filename': self.filename,
+            'uid': self.uid
+        }
 
 
 @dataclasses.dataclass()
@@ -93,6 +105,7 @@ class Syncer:
                     'failed to create mailbox to %s due to %s', credential.email, e)
                 exit(1)
 
+        # TODO: figure out how to auth with drive and firestore
         info = {
             'access_token': self.config.google_creds.access_token,
             'refresh_token': self.config.google_creds.refresh_token,
