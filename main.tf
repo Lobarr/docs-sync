@@ -32,16 +32,15 @@ provider "google" {
   region  = var.location
 }
 
-# Enable cloud run service
-resource "google_project_service" "cloud_run" {
+# Enable required cloud services
+resource "google_project_service" "services" {
+  for_each = toset([
+    "run.googleapis.com",
+    "cloudscheduler.googleapis.com",
+    "containerregistry.googleapis.com",
+  ])
   project = var.project_id
-  service = "run.googleapis.com"
-}
-
-# Enable cloud schduler service
-resource "google_project_service" "cloud_scheduler" {
-  project = var.project_id
-  service = "cloudscheduler.googleapis.com"
+  service = each.key
 }
 
 # Create a Cloud Run service
@@ -64,7 +63,7 @@ resource "google_cloud_run_service" "docs_sync_service" {
   }
 
   depends_on = [
-    # google_project_service.cloud_run
+    google_project_service.services
   ]
 }
 
