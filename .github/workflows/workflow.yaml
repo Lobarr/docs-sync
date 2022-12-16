@@ -8,11 +8,12 @@ on:
   - pull_request
 name: workflow
 env:
+  IMAGE_NAME: gcr.io/${{ secrets.PROJECT_ID }}/docs-sync:${{ github.sha }}
   TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
   TF_VAR_location: ${{ secrets.LOCATION }}
   TF_VAR_service_account: ${{ secrets.SERVICE_ACCOUNT }}
+  TF_VAR_docs_sync_image: ${{ env.IMAGE_NAME }}
   BUCKET_NAME: docs-sync-tfstate
-  IMAGE_NAME: gcr.io/${{ secrets.PROJECT_ID }}/docs-sync:${{ github.sha }}
   GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 jobs:
   checks:

@@ -13,6 +13,11 @@ variable "service_account" {
   sensitive = true
 }
 
+variable "docs_sync_image" {
+  type      = string
+  sensitive = false
+}
+
 terraform {
   required_providers {
     google = {
@@ -52,7 +57,7 @@ resource "google_cloud_run_service" "docs_sync" {
   template {
     spec {
       containers {
-        image = "ghcr.io/lobarr/docs-sync:latest"
+        image = var.docs_sync_image
       }
       service_account_name = var.service_account
     }
