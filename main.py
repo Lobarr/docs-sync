@@ -1,6 +1,7 @@
-import os
 import asyncio
 import hydra
+import os
+
 from src.configs import Config
 from src.syncer import Syncer
 from flask import Flask, jsonify

@@ -5,9 +5,9 @@ import datetime
 import email
 import hashlib
 import imaplib
+import json
 import logging
 import pprint
-import json
 
 from dateutil import parser
 from google.cloud import firestore
