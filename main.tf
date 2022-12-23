@@ -40,13 +40,31 @@ provider "google" {
 # Enable required cloud services
 resource "google_project_service" "services" {
   for_each = toset([
-    "serviceusage.googleapis.com",
-    "run.googleapis.com",
     "cloudscheduler.googleapis.com",
     "containerregistry.googleapis.com",
+    "firestore.googleapis.com",
+    "run.googleapis.com",
+    "serviceusage.googleapis.com",
   ])
   project = var.project_id
   service = each.key
+}
+
+# Create a Cloud Firestore instance
+resource "google_filestore_instance" "docs_sync" {
+  name     = "docs-sync"
+  location = var.location
+  tier     = "STANDARD"
+
+  file_shares {
+    capacity_gb = 1024
+    name        = "share1"
+  }
+
+  networks {
+    network = "default"
+    modes   = ["MODE_IPV4"]
+  }
 }
 
 # Create a Cloud Run service
@@ -69,7 +87,8 @@ resource "google_cloud_run_service" "docs_sync" {
   }
 
   depends_on = [
-    google_project_service.services
+    google_project_service.services,
+    google_filestore_instance.docs_sync,
   ]
 }
 
@@ -90,6 +109,26 @@ resource "google_cloud_run_service_iam_member" "scheduler_invoke_docs_sync" {
   depends_on = [
     google_cloud_run_service.docs_sync,
     google_service_account.cloud_scheduler_invoker
+  ]
+}
+
+# Create serivce account for cloud run to be able to write to firestore 
+resource "google_service_account" "cloud_firestore_invoker" {
+  project     = var.project_id
+  account_id  = "cloud-firestore-run-invoker"
+  description = "cloud run service account used to write to firestore"
+}
+
+# Grant cloud firestore permission to write to the docs-sync instance 
+resource "google_cloud_run_service_iam_member" "run_write_docs_sync" {
+  project  = var.project_id
+  location = var.location
+  service  = google_cloud_run_service.docs_sync.name
+  role     = "roles/datastore.user"
+  member   = "serviceAccount:${google_service_account.cloud_firestore_invoker.email}"
+  depends_on = [
+    google_cloud_run_service.docs_sync,
+    google_service_account.cloud_firestore_invoker
   ]
 }
 

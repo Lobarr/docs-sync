@@ -1,19 +1,13 @@
 # process emails sent to the following emails
 credentials:
-  - email: email@gmail.com 
+  - email: email@gmail.com
     password: some-password
-    imap_server: imap.gmail.com 
+    imap_server: imap.gmail.com
     imap_port: 993
 # process email sent from the following emails
 mails_from:
   - from@gmail.com
 folder_id: some-folder-id
-# google credentials used for drive and firestore
-google_creds:
-  access_token: some-access-token
-  refresh_token: some-refresh-token
-  client_id: some-client-id
-  client_secret: some-client-secret
 # flag that determines whether syncher uploads attachments to google drive
 upload_to_drive: false
 # flag that determines whether syncer progress is persisted to firestore

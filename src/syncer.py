@@ -8,11 +8,15 @@ import imaplib
 import json
 import logging
 import pprint
+import google.auth
 
+from io import BytesIO
 from dateutil import parser
 from google.cloud import firestore
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
 from google.oauth2.credentials import Credentials
+
 
 from src.configs import Config, Credential
 
@@ -105,15 +109,7 @@ class Syncer:
                     'failed to create mailbox to %s due to %s', credential.email, e)
                 exit(1)
 
-        # TODO: figure out how to auth with drive and firestore
-        info = {
-            'access_token': self.config.google_creds.access_token,
-            'refresh_token': self.config.google_creds.refresh_token,
-            'token_uri': 'https://oauth2.googleapis.com/token',
-            'client_id': self.config.google_creds.client_id,
-            'client_secret': self.config.google_creds.client_secret,
-        }
-        creds = Credentials.from_authorized_user_info(info=info)
+        creds, _ = google.auth.default()
 
         # connect to firestore in order to persist progress
         if self.config.persist_to_firestore:
@@ -138,26 +134,26 @@ class Syncer:
         for attachment in parsed_email.attachments:
             try:
                 file_content_b64 = base64.urlsafe_b64encode(
-                    attachment.content.encode('utf-8')).decode('utf-8')
+                    attachment.content).decode('utf-8')
 
-                # TODO: evaluate google drive 'properties' as an option
-                # for a data store to remove the firestore dependency.
-                # the only query we care about is 'has this email been syned'
-                # refer to https://developers.google.com/drive/api/guides/search-files#custom and https://developers.google.com/drive/api/guides/properties
                 file_metadata = {
                     'name': attachment.filename,
                     'parents': [self.config.folder_id],
                     'mimeType': attachment.content_type,
-                }
-
-                file_content = {
-                    'data': file_content_b64,
-                    'mimeType': attachment.content_type,
-                    'encoding': 'base64'
+                    'properties': {
+                        'email_id': parsed_email.email_id,
+                    }
                 }
 
                 file = self.drive_service.files().create(
-                    body=file_metadata, media_body=file_content).execute()
+                    body=file_metadata,
+                    media_body=MediaIoBaseUpload(
+                        BytesIO(attachment.content),
+                        mimetype=attachment.content_type,
+                        chunksize=1024*1024,
+                        resumable=True,
+                    )
+                ).execute()
 
                 attachment.drive_url = file['webContentLink']
             except Exception as e:
@@ -203,7 +199,7 @@ class Syncer:
             raw_email_message)
 
         parsed_email = ParsedEmail(
-            last_parsed_at=datetime.datetime.now(),
+            last_parsed_at=datetime.datetime.now().timestamp(),
             sent_from=sent_from,
             sent_to=credential.email,
             email_id=decoded_email_id,

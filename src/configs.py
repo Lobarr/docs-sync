@@ -11,19 +11,10 @@ class Credential:
 
 
 @dataclasses.dataclass()
-class GoogleCreds:
-    access_token: str = dataclasses.field(default_factory=str)
-    refresh_token: str = dataclasses.field(default_factory=str)
-    client_id: str = dataclasses.field(default_factory=str)
-    client_secret: str = dataclasses.field(default_factory=str)
-
-
-@dataclasses.dataclass()
 class Config:
     credentials: list[Credential] = dataclasses.field(default_factory=list)
     mails_from: list[str] = dataclasses.field(default_factory=list)
     folder_id: str = dataclasses.field(default_factory=str)
-    google_creds: GoogleCreds = dataclasses.field(default_factory=GoogleCreds)
     upload_to_drive: bool = dataclasses.field(default_factory=bool)
     persist_to_firestore: bool = dataclasses.field(default_factory=bool)
     enable_http_server: bool = dataclasses.field(default_factory=bool)

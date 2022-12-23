@@ -10,6 +10,7 @@ autopep8 = "*"
 google-api-python-client = "*"
 python-dateutil = "*"
 flask = "*"
+backoff = "*"
 
 [dev-packages]
 

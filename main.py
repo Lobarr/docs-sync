@@ -11,20 +11,23 @@ from flask import Flask, jsonify
 def main(cfg: Config) -> None:
     syncer = Syncer(cfg)
 
-    if cfg.enable_http_server:
-        app = Flask(__name__)
-
-        @app.post('/sync')
-        async def sync():
-            try:
-                await syncer.sync()
-                return jsonify({'status': 'ok'})
-            except Exception as e:
-                return jsonify({'status': 'error', 'msg': str(e)})
-
-        app.run(port=os.getenv('PORT') or 8080)
-    else:
+    if not cfg.enable_http_server:
         asyncio.run(syncer.sync())
+        return
+
+    app = Flask(__name__)
+
+    @app.post('/sync')
+    async def sync():
+        try:
+            await syncer.sync()
+            return jsonify({'status': 'ok'})
+        except Exception as e:
+            syncer.logger.error(
+                'ran into error %s while attampting to sync', e)
+            return jsonify({'status': 'error', 'msg': 'failed to sync'})
+
+    app.run(port=os.getenv('PORT') or 8080)
 
 
 if __name__ == "__main__":
