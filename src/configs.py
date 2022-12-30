@@ -19,3 +19,4 @@ class Config:
     mails_from: list[str] = dataclasses.field(default_factory=list)
     persist_to_firestore: bool = dataclasses.field(default_factory=bool)
     upload_to_drive: bool = dataclasses.field(default_factory=bool)
+    emails_processed_limit: int = dataclasses.field(default_factory=int)

@@ -35,7 +35,7 @@ class EmailAttachment(json.JSONEncoder):
         return hashlib.sha256(self.content).hexdigest()
 
     @property
-    def content_size(self) -> str:
+    def content_size(self) -> int:
         return len(self.content)
 
     @property
@@ -107,7 +107,6 @@ class Syncer:
                 logging.fatal(
                     'failed to create mailbox to %s due to %s', credential.email, e)
                 exit(1)
-
 
         # connect to firestore in order to persist progress
         if self.config.persist_to_firestore:
@@ -248,6 +247,7 @@ class Syncer:
             self.logger.info('processing emails sent to %s', credential.email)
 
             mailbox = self.mailboxes[credential.email]
+            emails_processed = 0
 
             # process emails from each provided email source
             for sent_from in self.config.mails_from:
@@ -256,4 +256,8 @@ class Syncer:
                 _, data = mailbox.search(None, f'FROM {sent_from}')
 
                 for email_id in data[0].split():
+                    if self.config.emails_processed_limit > 0 and emails_processed >= self.config.emails_processed_limit:
+                        break
+
                     await self._process_email(email_id, mailbox, sent_from, credential)
+                    emails_processed += 1
