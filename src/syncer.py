@@ -17,7 +17,6 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 from google.oauth2.credentials import Credentials
 
-
 from src.configs import Config, Credential
 
 
@@ -109,10 +108,10 @@ class Syncer:
                     'failed to create mailbox to %s due to %s', credential.email, e)
                 exit(1)
 
-        creds, _ = google.auth.default()
 
         # connect to firestore in order to persist progress
         if self.config.persist_to_firestore:
+            creds, _ = google.auth.default()
             self.db_client = firestore.Client(
                 credentials=creds)
             self.parsed_emails_collection = self.db_client.collection(
@@ -123,6 +122,7 @@ class Syncer:
 
         # connect to google drive
         if self.config.upload_to_drive:
+            creds = Credentials.from_api_key(self.config.drive_api_token)
             self.drive_service = build('drive', 'v3', credentials=creds)
         else:
             self.drive_service = None

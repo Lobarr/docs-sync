@@ -42,6 +42,7 @@ resource "google_project_service" "services" {
   for_each = toset([
     "cloudscheduler.googleapis.com",
     "containerregistry.googleapis.com",
+    "drive.googleapis.com",
     "firestore.googleapis.com",
     "run.googleapis.com",
     "serviceusage.googleapis.com",

@@ -13,8 +13,9 @@ class Credential:
 @dataclasses.dataclass()
 class Config:
     credentials: list[Credential] = dataclasses.field(default_factory=list)
-    mails_from: list[str] = dataclasses.field(default_factory=list)
-    folder_id: str = dataclasses.field(default_factory=str)
-    upload_to_drive: bool = dataclasses.field(default_factory=bool)
-    persist_to_firestore: bool = dataclasses.field(default_factory=bool)
+    drive_api_token: str = dataclasses.field(default_factory=str)
     enable_http_server: bool = dataclasses.field(default_factory=bool)
+    folder_id: str = dataclasses.field(default_factory=str)
+    mails_from: list[str] = dataclasses.field(default_factory=list)
+    persist_to_firestore: bool = dataclasses.field(default_factory=bool)
+    upload_to_drive: bool = dataclasses.field(default_factory=bool)
