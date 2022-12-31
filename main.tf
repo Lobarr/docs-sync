@@ -290,7 +290,7 @@ resource "google_cloud_run_v2_service" "docs_sync" {
 
 //TODO: figure out how to give cluod run secretAccessor
 resource "google_secret_manager_secret_iam_member" "secret-access" {
-  for_each  = toset([google_secret_manager_secret.credentials_0_email])
+  for_each  = toset([google_secret_manager_secret.credentials_0_email.id])
   secret_id = each.key
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${var.project_id}-compute@developer.gserviceaccount.com"
