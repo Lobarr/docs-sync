@@ -145,14 +145,6 @@ resource "google_secret_manager_secret_version" "credentials_0_password_version"
 resource "google_secret_manager_secret" "credentials_0_imap_server" {
   secret_id = "credentials_0_imap_server"
 
-  # labels = {
-  #   mails_from                = var.mails_from
-  #   persist_to_firestore      = var.persist_to_firestore
-  #   upload_to_drive           = var.upload_to_drive
-  #   drive_api_token           = var.drive_api_token
-  #   folder_id                 = var.folder_id
-  # }
-
   replication {
     user_managed {
       replicas {
@@ -288,19 +280,11 @@ resource "google_cloud_run_v2_service" "docs_sync" {
   ]
 }
 
-//TODO: figure out how to give cluod run secretAccessor
-resource "google_secret_manager_secret_iam_member" "secret-access" {
-  for_each  = toset([google_secret_manager_secret.credentials_0_email.id])
-  secret_id = each.key
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${var.project_id}-compute@developer.gserviceaccount.com"
-}
-
-# Create serivce account for cloud scheduler to be able to invoke the cloud run service
-resource "google_service_account" "cloud_scheduler_invoker" {
+# Create serivce account used by cloud run service
+resource "google_service_account" "docs_sync_sa" {
   project     = var.project_id
-  account_id  = "cloud-run-scheduler-invoker"
-  description = "cloud scheduler service account used to invoke cloud run services"
+  account_id  = "docs-sync-sa"
+  description = "sa used to give cloud run service all permissions they need"
 }
 
 # Grant cloud scheduler permission to invoke the docs-sync service
@@ -309,31 +293,73 @@ resource "google_cloud_run_service_iam_member" "scheduler_invoke_docs_sync" {
   location = var.location
   service  = google_cloud_run_v2_service.docs_sync.name
   role     = "roles/run.invoker"
-  member   = "serviceAccount:${google_service_account.cloud_scheduler_invoker.email}"
+  member   = "serviceAccount:${google_service_account.docs_sync_sa.email}"
   depends_on = [
     google_cloud_run_v2_service.docs_sync,
-    google_service_account.cloud_scheduler_invoker
+    google_service_account.docs_sync_sa
   ]
 }
 
-# Create serivce account for cloud run to be able to write to firestore 
-resource "google_service_account" "cloud_firestore_invoker" {
-  project     = var.project_id
-  account_id  = "cloud-firestore-run-invoker"
-  description = "cloud run service account used to write to firestore"
-}
-
-# Grant cloud firestore permission to write to the docs-sync instance 
+# Grant cloud firestore permission to write to the docs-sync service 
 resource "google_cloud_run_service_iam_member" "run_write_docs_sync" {
   project  = var.project_id
   location = var.location
   service  = google_cloud_run_v2_service.docs_sync.name
   role     = "roles/datastore.user"
-  member   = "serviceAccount:${google_service_account.cloud_firestore_invoker.email}"
+  member   = "serviceAccount:${google_service_account.docs_sync_sa.email}"
   depends_on = [
     google_cloud_run_v2_service.docs_sync,
-    google_service_account.cloud_firestore_invoker
+    google_service_account.docs_sync_sa
   ]
+}
+
+//TODO: figure out how to give cluod run secretAccessor
+resource "google_secret_manager_secret_iam_member" "credentials_0_email_secret_access" {
+  secret_id = google_secret_manager_secret.credentials_0_email.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.docs_sync_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "credentials_0_password_secret_access" {
+  secret_id = google_secret_manager_secret.credentials_0_password.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.docs_sync_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "credentials_0_imap_server_secret_access" {
+  secret_id = google_secret_manager_secret.credentials_0_imap_server.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.docs_sync_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "mails_from_secret_access" {
+  secret_id = google_secret_manager_secret.mails_from.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.docs_sync_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "persist_to_firestore_secret_access" {
+  secret_id = google_secret_manager_secret.persist_to_firestore.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.docs_sync_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "upload_to_drive_secret_access" {
+  secret_id = google_secret_manager_secret.upload_to_drive.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.docs_sync_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "drive_api_token_secret_access" {
+  secret_id = google_secret_manager_secret.drive_api_token.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.docs_sync_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "folder_id_secret_access" {
+  secret_id = google_secret_manager_secret.folder_id.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.docs_sync_sa.email}"
 }
 
 # Create a Cloud Scheduler job to run the Cloud Run service
@@ -348,7 +374,7 @@ resource "google_cloud_scheduler_job" "docs_sync_job" {
   }
   depends_on = [
     google_cloud_run_v2_service.docs_sync,
-    google_service_account.cloud_scheduler_invoker,
+    google_service_account.docs_sync_sa,
     google_cloud_run_service_iam_member.scheduler_invoke_docs_sync
   ]
 }
