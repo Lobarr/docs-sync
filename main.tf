@@ -258,11 +258,84 @@ resource "google_cloud_run_v2_service" "docs_sync" {
     }
     containers {
       image = var.docs_sync_image
+      args = [
+        "credentials.0.email=$CREDENTIALS_0_EMAIL",
+        "credentials.0.password=$CREDENTIALS_0_PASSWORD",
+        "credentials.0.imap_server=$CREDENTIALS_0_IMAP_SERVER",
+        "mails_from=$MAILS_FROM",
+        "persist_to_firestore=$PERSIST_TO_FIRESTORE",
+        "upload_to_drive=$UPLOAD_TO_DRIVE",
+        "folder_id=$FOLDER_ID"
+      ]
       env {
         name = "CREDENTIALS_0_EMAIL"
         value_source {
           secret_key_ref {
             secret = google_secret_manager_secret.credentials_0_email.id
+          }
+        }
+      }
+      env {
+        name = "CREDENTIALS_0_PASSWORD"
+        value_source {
+          secret_key_ref {
+            secret = google_secret_manager_secret.credentials_0_password.id
+          }
+        }
+      }
+      env {
+        name = "CREDENTIALS_0_IMAP_SERVER"
+        value_source {
+          secret_key_ref {
+            secret = google_secret_manager_secret.credentials_0_imap_server.id
+          }
+        }
+      }
+      env {
+        name = "MAILS_FROM"
+        value_source {
+          secret_key_ref {
+            secret = google_secret_manager_secret.mails_from.id
+          }
+        }
+      }
+      env {
+        name = "PERSIST_TO_FIRESTORE"
+        value_source {
+          secret_key_ref {
+            secret = google_secret_manager_secret.persist_to_firestore.id
+          }
+        }
+      }
+      env {
+        name = "UPLOAD_TO_DRIVE"
+        value_source {
+          secret_key_ref {
+            secret = google_secret_manager_secret.upload_to_drive.id
+          }
+        }
+      }
+      env {
+        name = "DRIVE_API_TOKEN"
+        value_source {
+          secret_key_ref {
+            secret = google_secret_manager_secret.drive_api_token.id
+          }
+        }
+      }
+      env {
+        name = "DRIVE_API_TOKEN"
+        value_source {
+          secret_key_ref {
+            secret = google_secret_manager_secret.drive_api_token.id
+          }
+        }
+      }
+      env {
+        name = "FOLDER_ID"
+        value_source {
+          secret_key_ref {
+            secret = google_secret_manager_secret.folder_id.id
           }
         }
       }
