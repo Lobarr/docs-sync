@@ -15,7 +15,7 @@ variable "service_account" {
 
 variable "docs_sync_image" {
   type      = string
-  sensitive = false
+  sensitive = true
 }
 
 variable "credentials_0_email" {
