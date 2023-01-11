@@ -17,7 +17,7 @@ env:
   TF_VAR_drive_api_token: ${{ secrets.DRIVE_API_TOKEN }}
   TF_VAR_folder_id: ${{ secrets.FOLDER_ID }}
   TF_VAR_location: ${{ secrets.LOCATION }}
-  TF_VAR_mails_from: ${{ secrets.MAILS_FROM }}
+  TF_VAR_mails_from_0: ${{ secrets.MAILS_FROM_0 }}
   TF_VAR_persist_to_firestore: ${{ secrets.PERSIST_TO_FIRESTORE }}
   TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
   TF_VAR_service_account: ${{ secrets.SERVICE_ACCOUNT }}
