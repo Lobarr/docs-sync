@@ -11,6 +11,7 @@ from flask import Flask, jsonify
 @hydra.main(config_path="configs", config_name="config")
 def main(cfg: Config) -> None:
     syncer = Syncer(cfg)
+    port = os.getenv('PORT') or 8080
 
     if not cfg.enable_http_server:
         asyncio.run(syncer.sync())
@@ -26,10 +27,11 @@ def main(cfg: Config) -> None:
         except Exception as e:
             syncer.logger.error(
                 'ran into error %s while attampting to sync', e)
-            return jsonify({'status': 'error', 'msg': 'failed to sync'}, 
-                status=http.HTTPStatus.INTERNAL_SERVER_ERROR)
+            return jsonify({'status': 'error', 'msg': 'failed to sync'},
+                           status=http.HTTPStatus.INTERNAL_SERVER_ERROR)
 
-    app.run(port=os.getenv('PORT') or 8080)
+    syncer.logger.info('starting http server on %d', port)
+    app.run(port=port)
 
 
 if __name__ == "__main__":
