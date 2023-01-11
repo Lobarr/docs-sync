@@ -5,12 +5,16 @@ import datetime
 import email
 import hashlib
 import imaplib
+import json
 import logging
 import pprint
+import google.auth
 
+from io import BytesIO
 from dateutil import parser
 from google.cloud import firestore
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
 from google.oauth2.credentials import Credentials
 
 from src.configs import Config, Credential
@@ -20,7 +24,7 @@ _PARSED_EMAILS_COLLECTION = 'parsed_emails'
 
 
 @dataclasses.dataclass
-class EmailAttachment:
+class EmailAttachment(json.JSONEncoder):
     filename: str = dataclasses.field(default_factory=str)
     content: bytes = dataclasses.field(default_factory=bytes)
     content_type: str = dataclasses.field(default_factory=str)
@@ -31,7 +35,7 @@ class EmailAttachment:
         return hashlib.sha256(self.content).hexdigest()
 
     @property
-    def content_size(self) -> str:
+    def content_size(self) -> int:
         return len(self.content)
 
     @property
@@ -42,6 +46,17 @@ class EmailAttachment:
             self.content_type,
         ]).encode('utf-8')
         return hashlib.sha256(payload).hexdigest()
+
+    def default(self, o):
+        # omit self.content when serializing to json
+        return {
+            'content_hash': self.content_hash,
+            'content_size': self.content_size,
+            'content_type': self.content_type,
+            'drive_url': self.drive_url,
+            'filename': self.filename,
+            'uid': self.uid
+        }
 
 
 @dataclasses.dataclass()
@@ -93,17 +108,9 @@ class Syncer:
                     'failed to create mailbox to %s due to %s', credential.email, e)
                 exit(1)
 
-        info = {
-            'access_token': self.config.google_creds.access_token,
-            'refresh_token': self.config.google_creds.refresh_token,
-            'token_uri': 'https://oauth2.googleapis.com/token',
-            'client_id': self.config.google_creds.client_id,
-            'client_secret': self.config.google_creds.client_secret,
-        }
-        creds = Credentials.from_authorized_user_info(info=info)
-
         # connect to firestore in order to persist progress
         if self.config.persist_to_firestore:
+            creds, _ = google.auth.default()
             self.db_client = firestore.Client(
                 credentials=creds)
             self.parsed_emails_collection = self.db_client.collection(
@@ -114,6 +121,7 @@ class Syncer:
 
         # connect to google drive
         if self.config.upload_to_drive:
+            creds = Credentials.from_api_key(self.config.drive_api_token)
             self.drive_service = build('drive', 'v3', credentials=creds)
         else:
             self.drive_service = None
@@ -125,22 +133,26 @@ class Syncer:
         for attachment in parsed_email.attachments:
             try:
                 file_content_b64 = base64.urlsafe_b64encode(
-                    attachment.content.encode('utf-8')).decode('utf-8')
+                    attachment.content).decode('utf-8')
 
                 file_metadata = {
                     'name': attachment.filename,
                     'parents': [self.config.folder_id],
                     'mimeType': attachment.content_type,
-                }
-
-                file_content = {
-                    'data': file_content_b64,
-                    'mimeType': attachment.content_type,
-                    'encoding': 'base64'
+                    'properties': {
+                        'email_id': parsed_email.email_id,
+                    }
                 }
 
                 file = self.drive_service.files().create(
-                    body=file_metadata, media_body=file_content).execute()
+                    body=file_metadata,
+                    media_body=MediaIoBaseUpload(
+                        BytesIO(attachment.content),
+                        mimetype=attachment.content_type,
+                        chunksize=1024*1024,
+                        resumable=True,
+                    )
+                ).execute()
 
                 attachment.drive_url = file['webContentLink']
             except Exception as e:
@@ -186,7 +198,7 @@ class Syncer:
             raw_email_message)
 
         parsed_email = ParsedEmail(
-            last_parsed_at=datetime.datetime.now(),
+            last_parsed_at=datetime.datetime.now().timestamp(),
             sent_from=sent_from,
             sent_to=credential.email,
             email_id=decoded_email_id,
@@ -235,6 +247,7 @@ class Syncer:
             self.logger.info('processing emails sent to %s', credential.email)
 
             mailbox = self.mailboxes[credential.email]
+            emails_processed = 0
 
             # process emails from each provided email source
             for sent_from in self.config.mails_from:
@@ -243,4 +256,8 @@ class Syncer:
                 _, data = mailbox.search(None, f'FROM {sent_from}')
 
                 for email_id in data[0].split():
+                    if self.config.emails_processed_limit > 0 and emails_processed >= self.config.emails_processed_limit:
+                        break
+
                     await self._process_email(email_id, mailbox, sent_from, credential)
+                    emails_processed += 1

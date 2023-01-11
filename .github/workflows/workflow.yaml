@@ -8,18 +8,39 @@ on:
   - pull_request
 name: workflow
 env:
-  TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
-  TF_VAR_location: ${{ secrets.LOCATION }}
-  TF_VAR_service_account: ${{ secrets.SERVICE_ACCOUNT }}
-  TF_VAR_access_token: ${{ secrets.GCP_API_KEY }}
-  IMAGE_NAME: ghcr.io/lobarr/docs-sync:${{ github.sha }}
+  BUCKET_NAME: docs-sync-tfstate
   GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+  TF_VAR_credentials_0_email: ${{ secrets.CREDENTIALS_0_EMAIL }}
+  TF_VAR_credentials_0_imap_server: ${{ secrets.CREDENTIALS_0_IMAP_SERVER }}
+  TF_VAR_credentials_0_password: ${{ secrets.CREDENTIALS_0_PASSWORD }}
+  TF_VAR_docs_sync_image: gcr.io/${{ secrets.PROJECT_ID }}/docs-sync:${{ github.sha }}
+  TF_VAR_drive_api_token: ${{ secrets.DRIVE_API_TOKEN }}
+  TF_VAR_folder_id: ${{ secrets.FOLDER_ID }}
+  TF_VAR_location: ${{ secrets.LOCATION }}
+  TF_VAR_mails_from_0: ${{ secrets.MAILS_FROM_0 }}
+  TF_VAR_persist_to_firestore: ${{ secrets.PERSIST_TO_FIRESTORE }}
+  TF_VAR_project_id: ${{ secrets.PROJECT_ID }}
+  TF_VAR_service_account: ${{ secrets.SERVICE_ACCOUNT }}
+  TF_VAR_upload_to_drive: ${{ secrets.UPLOAD_TO_DRIVE }}
 jobs:
   checks:
     runs-on: ubuntu-latest
     steps:
       # Checkout the code from the repository
       - uses: actions/checkout@master
+
+      - name: Authenticate to gcloud
+        uses: "google-github-actions/auth@v1"
+        with:
+          credentials_json: "${{ secrets.GOOGLE_CREDENTIALS }}"
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: "Show information about gcloud CLI"
+        run: |
+          gcloud auth configure-docker --quiet
+          gcloud info
 
       # Set up a Python environment
       - name: Set up Python environment
@@ -37,41 +58,22 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.local/share/virtualenvs
-          key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
+          key: ${{ runner.os }}-python-${{ steps.setup-python.outputs.python-version }}-pipenv-${{ hashFiles('Pipfile.lock') }}
 
       - name: Install dependencies
         if: steps.cache-pipenv.outputs.cache-hit != 'true'
         run: |
           pipenv install
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Build the Docker image using the IMAGE_NAME environment variable
+      # Build the Docker image using the TF_VAR_docs_sync_image environment variable
       - name: Build Docker image
         run: |
-          echo "Image name: ${{ env.IMAGE_NAME }}"
-          docker build -t ${{ env.IMAGE_NAME }} .
+          echo "Image name: ${{ env.TF_VAR_docs_sync_image }}"
+          docker build -t ${{ env.TF_VAR_docs_sync_image }} .
 
       - name: Push Docker image
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: docker push ${{ env.IMAGE_NAME }}
-
-      - name: Authenticate to gcloud
-        uses: "google-github-actions/auth@v1"
-        with:
-          credentials_json: "${{ secrets.GOOGLE_CREDENTIALS }}"
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-
-      - name: "Show information about gcloud CLI"
-        run: |
-          gcloud info
+        run: docker push ${{ env.TF_VAR_docs_sync_image }}
 
       # Setup a terraform enviornment
       - uses: hashicorp/setup-terraform@v2
@@ -85,9 +87,7 @@ jobs:
       - name: Terraform Init
         id: init
         run: |
-          terraform init -backend-config="type=gcs" \
-                -backend-config="bucket=${{ secrets.BUCKET_NAME }}" \
-                -backend-config="prefix=tf/state" \
+          terraform init
 
       - name: Terraform Validate
         id: validate
@@ -115,12 +115,14 @@ jobs:
             const botComment = comments.find(comment => {
               return comment.user.type === 'Bot' && comment.body.includes('Terraform Format and Style')
             })
+            const d = new Date()
 
             // 2. Prepare format of the comment
             const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
             #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
             #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
             <details><summary>Validation Output</summary>
+
 
             \`\`\`\n
             ${{ steps.validate.outputs.stdout }}
@@ -129,6 +131,8 @@ jobs:
             </details>
 
             #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+            Timestamp: ${d.toUTCString()}
 
             <details><summary>Show Plan</summary>
 
