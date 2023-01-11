@@ -123,7 +123,6 @@ jobs:
             #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
             <details><summary>Validation Output</summary>
 
-            Timestamp: ${d.toUTCString()}
 
             \`\`\`\n
             ${{ steps.validate.outputs.stdout }}
@@ -132,6 +131,8 @@ jobs:
             </details>
 
             #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+            Timestamp: ${d.toUTCString()}
 
             <details><summary>Show Plan</summary>
 
